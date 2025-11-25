@@ -33,6 +33,8 @@ python consumer.py [OPTIONS]
 | `--group-id` | `my-consumer-group` | Consumer group ID |
 | `--offset-reset` | `earliest` | Offset reset strategy (`earliest` or `latest`) |
 
+Consumer automatically uses hostname as `client_id` for broker identification.
+
 ### Producer
 
 ```bash
@@ -89,8 +91,8 @@ kubectl apply -f k8s/
 kubectl get pods -n kafka-apps
 
 # View logs
-kubectl logs -f deployment/kafka-consumer -n kafka-apps
-kubectl logs -f deployment/kafka-producer -n kafka-apps
+kubectl logs -f statefulset/kafka-consumer -n kafka-apps
+kubectl logs -f statefulset/kafka-producer -n kafka-apps
 ```
 
 ### Configuration
@@ -99,7 +101,7 @@ Edit `k8s/configmap-config.yaml` to change Kafka settings:
 
 ```yaml
 data:
-  KAFKA_BOOTSTRAP_SERVERS: "192.168.3.14:9092"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-broker:9092"
   KAFKA_TOPIC: "test-topic"
   KAFKA_GROUP_ID: "my-consumer-group"
   KAFKA_OFFSET_RESET: "earliest"
@@ -112,7 +114,7 @@ data:
 ```bash
 # After modifying Python code, update ConfigMap and restart pods
 kubectl apply -f k8s/configmap-scripts.yaml
-kubectl rollout restart deployment/kafka-consumer deployment/kafka-producer -n kafka-apps
+kubectl rollout restart statefulset/kafka-consumer statefulset/kafka-producer -n kafka-apps
 ```
 
 ### Cleanup
@@ -125,6 +127,8 @@ kubectl delete -f k8s/
 
 - JSON message serialization/deserialization
 - Configurable consumer group
+- Hostname-based client ID for consumer identification
 - Auto commit enabled
 - Graceful shutdown with Ctrl+C
 - Kubernetes deployment without custom image build
+- StatefulSet with parallel pod management

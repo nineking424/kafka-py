@@ -16,13 +16,17 @@ data:
     from kafka import KafkaConsumer
     import json
     import argparse
+    import socket
 
-    def create_consumer(topic, bootstrap_servers='localhost:9092', group_id='my-group', auto_offset_reset='earliest'):
+    def create_consumer(topic, bootstrap_servers='localhost:9092', group_id='my-group', auto_offset_reset='earliest', client_id=None):
         """Create and configure Kafka consumer"""
+        if client_id is None:
+            client_id = socket.gethostname()
         consumer = KafkaConsumer(
             topic,
             bootstrap_servers=bootstrap_servers,
             group_id=group_id,
+            client_id=client_id,
             auto_offset_reset=auto_offset_reset,
             enable_auto_commit=True,
             value_deserializer=lambda m: json.loads(m.decode('utf-8')),
@@ -79,17 +83,21 @@ data:
         # Parse command-line arguments
         args = parse_arguments()
 
+        # Get hostname as client_id
+        client_id = socket.gethostname()
+
         # Display configuration
         print("=== Kafka Consumer Configuration ===")
         print(f"Bootstrap Servers: {args.bootstrap_servers}")
         print(f"Topic: {args.topic}")
         print(f"Group ID: {args.group_id}")
+        print(f"Client ID: {client_id}")
         print(f"Offset Reset: {args.offset_reset}")
         print("====================================\n")
 
         # Create consumer
         print(f"Creating Kafka consumer for topic '{args.topic}'...")
-        consumer = create_consumer(args.topic, args.bootstrap_servers, args.group_id, args.offset_reset)
+        consumer = create_consumer(args.topic, args.bootstrap_servers, args.group_id, args.offset_reset, client_id)
 
         # Start consuming
         consume_messages(consumer)

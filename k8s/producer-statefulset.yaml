@@ -1,19 +1,21 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: kafka-consumer
+  name: kafka-producer
   namespace: kafka-apps
   labels:
-    app: kafka-consumer
+    app: kafka-producer
 spec:
+  serviceName: kafka-producer
   replicas: 1
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
-      app: kafka-consumer
+      app: kafka-producer
   template:
     metadata:
       labels:
-        app: kafka-consumer
+        app: kafka-producer
     spec:
       initContainers:
         - name: install-dependencies
@@ -33,7 +35,7 @@ spec:
               mountPath: /app/lib
 
       containers:
-        - name: consumer
+        - name: producer
           image: python:3.12-slim
           env:
             - name: PYTHONPATH
@@ -50,27 +52,30 @@ spec:
                 configMapKeyRef:
                   name: kafka-config
                   key: KAFKA_TOPIC
-            - name: KAFKA_GROUP_ID
+            - name: KAFKA_NUM_MESSAGES
               valueFrom:
                 configMapKeyRef:
                   name: kafka-config
-                  key: KAFKA_GROUP_ID
-            - name: KAFKA_OFFSET_RESET
+                  key: KAFKA_NUM_MESSAGES
+            - name: KAFKA_DELAY
               valueFrom:
                 configMapKeyRef:
                   name: kafka-config
-                  key: KAFKA_OFFSET_RESET
+                  key: KAFKA_DELAY
           command:
-            - python
-            - /app/scripts/consumer.py
-            - --bootstrap-servers
-            - $(KAFKA_BOOTSTRAP_SERVERS)
-            - --topic
-            - $(KAFKA_TOPIC)
-            - --group-id
-            - $(KAFKA_GROUP_ID)
-            - --offset-reset
-            - $(KAFKA_OFFSET_RESET)
+            - /bin/sh
+            - -c
+            - |
+              while true; do
+                echo "Starting producer batch..."
+                python /app/scripts/producer.py \
+                  --bootstrap-servers $KAFKA_BOOTSTRAP_SERVERS \
+                  --topic $KAFKA_TOPIC \
+                  --num-messages $KAFKA_NUM_MESSAGES \
+                  --delay $KAFKA_DELAY
+                echo "Batch complete, sleeping 60s..."
+                sleep 60
+              done
           volumeMounts:
             - name: scripts
               mountPath: /app/scripts

@@ -1,19 +1,21 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: kafka-producer
+  name: kafka-consumer
   namespace: kafka-apps
   labels:
-    app: kafka-producer
+    app: kafka-consumer
 spec:
+  serviceName: kafka-consumer
   replicas: 1
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
-      app: kafka-producer
+      app: kafka-consumer
   template:
     metadata:
       labels:
-        app: kafka-producer
+        app: kafka-consumer
     spec:
       initContainers:
         - name: install-dependencies
@@ -33,7 +35,7 @@ spec:
               mountPath: /app/lib
 
       containers:
-        - name: producer
+        - name: consumer
           image: python:3.12-slim
           env:
             - name: PYTHONPATH
@@ -50,30 +52,27 @@ spec:
                 configMapKeyRef:
                   name: kafka-config
                   key: KAFKA_TOPIC
-            - name: KAFKA_NUM_MESSAGES
+            - name: KAFKA_GROUP_ID
               valueFrom:
                 configMapKeyRef:
                   name: kafka-config
-                  key: KAFKA_NUM_MESSAGES
-            - name: KAFKA_DELAY
+                  key: KAFKA_GROUP_ID
+            - name: KAFKA_OFFSET_RESET
               valueFrom:
                 configMapKeyRef:
                   name: kafka-config
-                  key: KAFKA_DELAY
+                  key: KAFKA_OFFSET_RESET
           command:
-            - /bin/sh
-            - -c
-            - |
-              while true; do
-                echo "Starting producer batch..."
-                python /app/scripts/producer.py \
-                  --bootstrap-servers $KAFKA_BOOTSTRAP_SERVERS \
-                  --topic $KAFKA_TOPIC \
-                  --num-messages $KAFKA_NUM_MESSAGES \
-                  --delay $KAFKA_DELAY
-                echo "Batch complete, sleeping 60s..."
-                sleep 60
-              done
+            - python
+            - /app/scripts/consumer.py
+            - --bootstrap-servers
+            - $(KAFKA_BOOTSTRAP_SERVERS)
+            - --topic
+            - $(KAFKA_TOPIC)
+            - --group-id
+            - $(KAFKA_GROUP_ID)
+            - --offset-reset
+            - $(KAFKA_OFFSET_RESET)
           volumeMounts:
             - name: scripts
               mountPath: /app/scripts
