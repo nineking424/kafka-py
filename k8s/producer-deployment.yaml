@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-producer
+  namespace: kafka-apps
+  labels:
+    app: kafka-producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-producer
+  template:
+    metadata:
+      labels:
+        app: kafka-producer
+    spec:
+      initContainers:
+        - name: install-dependencies
+          image: python:3.12-slim
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Installing Python dependencies..."
+              pip install --target=/app/lib -r /app/scripts/requirements.txt
+              echo "Dependencies installed successfully!"
+          volumeMounts:
+            - name: scripts
+              mountPath: /app/scripts
+              readOnly: true
+            - name: python-libs
+              mountPath: /app/lib
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+
+      containers:
+        - name: producer
+          image: python:3.12-slim
+          env:
+            - name: PYTHONPATH
+              value: "/app/lib"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_BOOTSTRAP_SERVERS
+            - name: KAFKA_TOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_TOPIC
+            - name: KAFKA_NUM_MESSAGES
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_NUM_MESSAGES
+            - name: KAFKA_DELAY
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_DELAY
+          command:
+            - /bin/sh
+            - -c
+            - |
+              while true; do
+                echo "Starting producer batch..."
+                python /app/scripts/producer.py \
+                  --bootstrap-servers $KAFKA_BOOTSTRAP_SERVERS \
+                  --topic $KAFKA_TOPIC \
+                  --num-messages $KAFKA_NUM_MESSAGES \
+                  --delay $KAFKA_DELAY
+                echo "Batch complete, sleeping 60s..."
+                sleep 60
+              done
+          volumeMounts:
+            - name: scripts
+              mountPath: /app/scripts
+              readOnly: true
+            - name: python-libs
+              mountPath: /app/lib
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+
+      volumes:
+        - name: scripts
+          configMap:
+            name: kafka-python-scripts
+            defaultMode: 0555
+        - name: python-libs
+          emptyDir: {}
+
+      restartPolicy: Always

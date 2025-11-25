@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-config
+  namespace: kafka-apps
+  labels:
+    app: kafka-python
+data:
+  KAFKA_BOOTSTRAP_SERVERS: "192.168.3.14:9092"
+  KAFKA_TOPIC: "test-topic"
+  KAFKA_GROUP_ID: "my-consumer-group"
+  KAFKA_OFFSET_RESET: "earliest"
+  KAFKA_NUM_MESSAGES: "10"
+  KAFKA_DELAY: "1.0"

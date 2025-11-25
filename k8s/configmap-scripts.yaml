@@ -1,0 +1,199 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-python-scripts
+  namespace: kafka-apps
+  labels:
+    app: kafka-python
+data:
+  requirements.txt: |
+    kafka-python-ng==2.2.2
+
+  consumer.py: |
+    """
+    Kafka Consumer - Receives messages from a Kafka topic
+    """
+    from kafka import KafkaConsumer
+    import json
+    import argparse
+
+    def create_consumer(topic, bootstrap_servers='localhost:9092', group_id='my-group', auto_offset_reset='earliest'):
+        """Create and configure Kafka consumer"""
+        consumer = KafkaConsumer(
+            topic,
+            bootstrap_servers=bootstrap_servers,
+            group_id=group_id,
+            auto_offset_reset=auto_offset_reset,
+            enable_auto_commit=True,
+            value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+            key_deserializer=lambda k: k.decode('utf-8') if k else None
+        )
+        return consumer
+
+    def consume_messages(consumer):
+        """Consume messages from Kafka topic"""
+        print("Starting to consume messages... (Press Ctrl+C to stop)")
+        try:
+            for message in consumer:
+                print(f"\n--- New Message ---")
+                print(f"Topic: {message.topic}")
+                print(f"Partition: {message.partition}")
+                print(f"Offset: {message.offset}")
+                print(f"Key: {message.key}")
+                print(f"Value: {message.value}")
+                print(f"Timestamp: {message.timestamp}")
+
+        except KeyboardInterrupt:
+            print("\n\nStopping consumer...")
+        finally:
+            consumer.close()
+            print("Consumer closed")
+
+    def parse_arguments():
+        """Parse command-line arguments"""
+        parser = argparse.ArgumentParser(description='Kafka Consumer - Receive messages from a Kafka topic')
+        parser.add_argument(
+            '--bootstrap-servers',
+            default='localhost:9092',
+            help='Kafka bootstrap servers (default: localhost:9092)'
+        )
+        parser.add_argument(
+            '--topic',
+            default='test-topic',
+            help='Kafka topic name (default: test-topic)'
+        )
+        parser.add_argument(
+            '--group-id',
+            default='my-consumer-group',
+            help='Consumer group ID (default: my-consumer-group)'
+        )
+        parser.add_argument(
+            '--offset-reset',
+            default='earliest',
+            choices=['earliest', 'latest'],
+            help='Offset reset strategy (default: earliest)'
+        )
+        return parser.parse_args()
+
+    def main():
+        # Parse command-line arguments
+        args = parse_arguments()
+
+        # Display configuration
+        print("=== Kafka Consumer Configuration ===")
+        print(f"Bootstrap Servers: {args.bootstrap_servers}")
+        print(f"Topic: {args.topic}")
+        print(f"Group ID: {args.group_id}")
+        print(f"Offset Reset: {args.offset_reset}")
+        print("====================================\n")
+
+        # Create consumer
+        print(f"Creating Kafka consumer for topic '{args.topic}'...")
+        consumer = create_consumer(args.topic, args.bootstrap_servers, args.group_id, args.offset_reset)
+
+        # Start consuming
+        consume_messages(consumer)
+
+    if __name__ == '__main__':
+        main()
+
+  producer.py: |
+    """
+    Kafka Producer - Sends messages to a Kafka topic
+    """
+    from kafka import KafkaProducer
+    import json
+    import time
+    import argparse
+
+    def create_producer(bootstrap_servers='localhost:9092'):
+        """Create and configure Kafka producer"""
+        producer = KafkaProducer(
+            bootstrap_servers=bootstrap_servers,
+            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+            key_serializer=lambda k: k.encode('utf-8') if k else None,
+            request_timeout_ms=30000,
+            max_block_ms=60000,
+            retries=5,
+            retry_backoff_ms=500,
+            metadata_max_age_ms=30000
+        )
+        return producer
+
+    def send_message(producer, topic, key, value):
+        """Send a message to Kafka topic"""
+        try:
+            future = producer.send(topic, key=key, value=value)
+            record_metadata = future.get(timeout=10)
+            print(f"Message sent to {record_metadata.topic} partition {record_metadata.partition} offset {record_metadata.offset}")
+            return True
+        except Exception as e:
+            print(f"Error sending message: {e}")
+            return False
+
+    def parse_arguments():
+        """Parse command-line arguments"""
+        parser = argparse.ArgumentParser(description='Kafka Producer - Send messages to a Kafka topic')
+        parser.add_argument(
+            '--bootstrap-servers',
+            default='localhost:9092',
+            help='Kafka bootstrap servers (default: localhost:9092)'
+        )
+        parser.add_argument(
+            '--topic',
+            default='test-topic',
+            help='Kafka topic name (default: test-topic)'
+        )
+        parser.add_argument(
+            '--num-messages',
+            type=int,
+            default=10,
+            help='Number of messages to send (default: 10)'
+        )
+        parser.add_argument(
+            '--delay',
+            type=float,
+            default=1.0,
+            help='Delay between messages in seconds (default: 1.0)'
+        )
+        return parser.parse_args()
+
+    def main():
+        # Parse command-line arguments
+        args = parse_arguments()
+
+        # Display configuration
+        print("=== Kafka Producer Configuration ===")
+        print(f"Bootstrap Servers: {args.bootstrap_servers}")
+        print(f"Topic: {args.topic}")
+        print(f"Number of Messages: {args.num_messages}")
+        print(f"Delay: {args.delay}s")
+        print("====================================\n")
+
+        # Create producer
+        print("Creating Kafka producer...")
+        producer = create_producer(args.bootstrap_servers)
+
+        try:
+            # Send sample messages
+            for i in range(args.num_messages):
+                message = {
+                    'id': i,
+                    'message': f'Hello Kafka {i}',
+                    'timestamp': time.time()
+                }
+                key = f'key-{i}'
+
+                print(f"Sending message {i}: {message}")
+                send_message(producer, args.topic, key, message)
+                time.sleep(args.delay)
+
+        except KeyboardInterrupt:
+            print("\nStopping producer...")
+        finally:
+            producer.flush()
+            producer.close()
+            print("Producer closed")
+
+    if __name__ == '__main__':
+        main()

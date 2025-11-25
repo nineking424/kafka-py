@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-consumer
+  namespace: kafka-apps
+  labels:
+    app: kafka-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-consumer
+  template:
+    metadata:
+      labels:
+        app: kafka-consumer
+    spec:
+      initContainers:
+        - name: install-dependencies
+          image: python:3.12-slim
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Installing Python dependencies..."
+              pip install --target=/app/lib -r /app/scripts/requirements.txt
+              echo "Dependencies installed successfully!"
+          volumeMounts:
+            - name: scripts
+              mountPath: /app/scripts
+              readOnly: true
+            - name: python-libs
+              mountPath: /app/lib
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+
+      containers:
+        - name: consumer
+          image: python:3.12-slim
+          env:
+            - name: PYTHONPATH
+              value: "/app/lib"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_BOOTSTRAP_SERVERS
+            - name: KAFKA_TOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_TOPIC
+            - name: KAFKA_GROUP_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_GROUP_ID
+            - name: KAFKA_OFFSET_RESET
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_OFFSET_RESET
+          command:
+            - python
+            - /app/scripts/consumer.py
+            - --bootstrap-servers
+            - $(KAFKA_BOOTSTRAP_SERVERS)
+            - --topic
+            - $(KAFKA_TOPIC)
+            - --group-id
+            - $(KAFKA_GROUP_ID)
+            - --offset-reset
+            - $(KAFKA_OFFSET_RESET)
+          volumeMounts:
+            - name: scripts
+              mountPath: /app/scripts
+              readOnly: true
+            - name: python-libs
+              mountPath: /app/lib
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+
+      volumes:
+        - name: scripts
+          configMap:
+            name: kafka-python-scripts
+            defaultMode: 0555
+        - name: python-libs
+          emptyDir: {}
+
+      restartPolicy: Always
