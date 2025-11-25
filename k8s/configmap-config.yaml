@@ -6,7 +6,7 @@ metadata:
   labels:
     app: kafka-python
 data:
-  KAFKA_BOOTSTRAP_SERVERS: "192.168.3.14:9092"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-broker-0.kafka-broker.kafka:9092,kafka-broker-1.kafka-broker.kafka:9092,kafka-broker-2.kafka-broker.kafka:9092"
   KAFKA_TOPIC: "test-topic"
   KAFKA_GROUP_ID: "my-consumer-group"
   KAFKA_OFFSET_RESET: "earliest"
