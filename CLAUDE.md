@@ -36,6 +36,11 @@ pip install -r requirements.txt
 
 ## Coding Conventions
 
+### Documentation
+
+- **모든 문서는 한국어로 작성** (README.md, CLAUDE.md 등)
+- 코드 내 주석은 영어 허용
+
 ### Python
 
 - Use docstrings for functions
@@ -57,12 +62,22 @@ pip install -r requirements.txt
 
 1. **Commit after every meaningful change** - Do not batch unrelated changes
 2. **Commit message in Korean** - 커밋 메시지는 한국어로 작성
+3. **Commit message format** - `<대상> <동작>` 형식 사용
    ```
-   기능 X 추가
-   Y 버그 수정
-   Z 설정 업데이트
+   # 동작 유형
+   X 추가          # 새 기능/파일 추가
+   X 수정          # 버그 수정
+   X 업데이트      # 기존 기능 개선
+   X 리팩토링      # 코드 구조 개선
+   X 제거          # 기능/파일 삭제
+
+   # 예시
+   Kafka consumer 추가
+   K8s 매니페스트 업데이트
+   client_id 지원 추가 및 StatefulSet 리팩토링
+   CLAUDE.md 가이드라인 업데이트
    ```
-3. **Always verify before commit**:
+4. **Always verify before commit**:
    ```bash
    git status
    git diff
