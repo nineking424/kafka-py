@@ -56,11 +56,11 @@ pip install -r requirements.txt
 ### Commit Rules
 
 1. **Commit after every meaningful change** - Do not batch unrelated changes
-2. **Commit message format**: Clear, descriptive, imperative mood
+2. **Commit message in Korean** - 커밋 메시지는 한국어로 작성
    ```
-   Add feature X
-   Fix bug in Y
-   Update configuration for Z
+   기능 X 추가
+   Y 버그 수정
+   Z 설정 업데이트
    ```
 3. **Always verify before commit**:
    ```bash
@@ -125,6 +125,15 @@ kubectl logs -f statefulset/kafka-producer -n kafka-apps
 kubectl apply -f k8s/configmap-scripts.yaml
 kubectl rollout restart statefulset/kafka-consumer statefulset/kafka-producer -n kafka-apps
 ```
+
+### Post-Test Documentation Update (REQUIRED)
+
+테스트 완료 후 반드시 관련 문서를 최신화:
+
+1. **README.md** - 사용법, 설정값 변경 시 갱신
+2. **CLAUDE.md** - 개발 가이드라인 변경 시 갱신
+3. **k8s/configmap-config.yaml** - 환경변수 추가/변경 시 Configuration Reference 테이블 갱신
+4. **requirements.txt** - 의존성 변경 시 Tech Stack 섹션 갱신
 
 ## Configuration Reference
 
