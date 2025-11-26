@@ -38,8 +38,9 @@ pip install -r requirements.txt
 
 ### Documentation
 
-- **모든 문서는 한국어로 작성** (README.md, CLAUDE.md 등)
-- 코드 내 주석은 영어 허용
+- Documents are written in English by default
+- Korean is used selectively where clarity is needed (e.g., user-facing instructions, Korean-specific guidelines)
+- Code comments in English
 
 ### Python
 
